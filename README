@@ -5,12 +5,4 @@ It is based on experience from porting OpenCV library to Android.
 Main goal is to share these scripts so that devs that use CMake as their build
 system may easily compile native code for Android.
 
-This project includes ports of the follow:
-
-* boost
-* eigen
-* glues
-
-And a few samples, to get you started.
-
 Also, used by the OpenCV project: http://opencv.org/android
