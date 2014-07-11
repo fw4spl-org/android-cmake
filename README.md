@@ -8,10 +8,9 @@ system may easily compile native code for Android.
 Also, used by the OpenCV project: http://opencv.org/android
 
 You can set directly set the toolchain in the main CMakeLists.txt of your project like this:
-
+```
 set(CROSS_COMPILING OFF CACHE BOOL "Set the toolchain file for cross compilation")
 
-```
 if(CROSS_COMPILING)
     execute_process(COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/clean_all.cmake)
     set(CMAKE_TOOLCHAIN_FILE CACHE FILEPATH "Path to the toolchain file")
