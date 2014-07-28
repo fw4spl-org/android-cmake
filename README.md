@@ -14,8 +14,8 @@ Also, used by the OpenCV project: http://opencv.org/android
 
 **Modification:**
 - Standalone supprot has been removed
-- Only INSTALL_PREFIX_PATH need to be set, others ouput path will be set automaticly from it
-- You can set directly set the toolchain in the main CMakeLists.txt of your project like this:
+- INSTALL_PREFIX_PATH only need to be adjusted, the other output channels that will be sent automatically from this one
+- You can set directly the toolchain in the main CMakeLists.txt of your project like this:
 ```
 set(CROSS_COMPILING OFF CACHE BOOL "Configure cross compilation for Android")
 
