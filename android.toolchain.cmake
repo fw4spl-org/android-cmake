@@ -36,40 +36,10 @@
 #  The file is mantained by the OpenCV project. The latest version can be get at
 #  http://code.opencv.org/projects/opencv/repository/revisions/master/changes/android/android.toolchain.cmake
 #
-#  Usage Linux:
-#   $ export ANDROID_NDK=/absolute/path/to/the/android-ndk
-#   $ mkdir build && cd build
-#   $ cmake -DCMAKE_TOOLCHAIN_FILE=path/to/the/android.toolchain.cmake ..
-#   $ make -j8
-#
-#  Usage Linux (using standalone toolchain):
-#   $ export ANDROID_STANDALONE_TOOLCHAIN=/absolute/path/to/android-toolchain
-#   $ mkdir build && cd build
-#   $ cmake -DCMAKE_TOOLCHAIN_FILE=path/to/the/android.toolchain.cmake ..
-#   $ make -j8
-#
-#  Usage Windows:
-#     You need native port of make to build your project.
-#     Android NDK r7 (or newer) already has make.exe on board.
-#     For older NDK you have to install it separately.
-#     For example, this one: http://gnuwin32.sourceforge.net/packages/make.htm
-#
-#   $ SET ANDROID_NDK=C:\absolute\path\to\the\android-ndk
-#   $ mkdir build && cd build
-#   $ cmake.exe -G"MinGW Makefiles"
-#       -DCMAKE_TOOLCHAIN_FILE=path\to\the\android.toolchain.cmake
-#       -DCMAKE_MAKE_PROGRAM="%ANDROID_NDK%\prebuilt\windows\bin\make.exe" ..
-#   $ cmake.exe --build .
-#
-#
 #  Options (can be set as cmake parameters: -D<option_name>=<value>):
 #    ANDROID_NDK=/opt/android-ndk - path to the NDK root.
 #      Can be set as environment variable. Can be set only at first cmake run.
 #
-#    ANDROID_STANDALONE_TOOLCHAIN=/opt/android-toolchain - path to the
-#      standalone toolchain. This option is not used if full NDK is found
-#      (ignored if ANDROID_NDK is set).
-#      Can be set as environment variable. Can be set only at first cmake run.
 #
 #    ANDROID_ABI=armeabi-v7a - specifies the target Application Binary
 #      Interface (ABI). This option nearly matches to the APP_ABI variable
