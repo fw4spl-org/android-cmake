@@ -1049,6 +1049,7 @@ else()
  set( ANDROID_CXX_FLAGS "--sysroot=${ANDROID_SYSROOT}" )
 endif()
 
+########################################
 # NDK flags
 if( ARMEABI OR ARMEABI_V7A )
  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fpic -funwind-tables" )
@@ -1361,16 +1362,16 @@ if(NOT CMAKE_IN_TRY_COMPILE)
  set( LIBRARY_OUTPUT_PATH "${CMAKE_INSTALL_PREFIX}/lib" )
 endif()
 
-
+########################################
 # copy shaed stl library to build directory
 if( NOT CMAKE_IN_TRY_COMPILE AND LIB_STL MATCHES "[.]so$" )
- get_filename_component( LIB_STLname "${LIB_STL}" NAME )
- execute_process( COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${LIB_STL}" "${LIBRARY_OUTPUT_PATH}/${LIB_STLname}" RESULT_VARIABLE __fileCopyProcess )
- if( NOT __fileCopyProcess EQUAL 0 OR NOT EXISTS "${LIBRARY_OUTPUT_PATH}/${LIB_STLname}")
-  message( SEND_ERROR "Failed copying of ${LIB_STL} to the ${LIBRARY_OUTPUT_PATH}/${LIB_STLname}" )
+ get_filename_component( LIB_STL_NAME "${LIB_STL}" NAME )
+ execute_process( COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${LIB_STL}" "${LIBRARY_OUTPUT_PATH}/${LIB_STL_NAME}" RESULT_VARIABLE FILE_COPY_PROCESS )
+ if( NOT FILE_COPY_PROCESS EQUAL 0 OR NOT EXISTS "${LIBRARY_OUTPUT_PATH}/${LIB_STL_NAME}")
+  message( SEND_ERROR "Failed copying of ${LIB_STL} to the ${LIBRARY_OUTPUT_PATH}/${LIB_STL_NAME}" )
  endif()
- unset( __fileCopyProcess )
- unset( LIB_STLname )
+ unset( FILE_COPY_PROCESS )
+ unset( LIB_STL_NAME )
 endif()
 
 
@@ -1385,66 +1386,6 @@ set( CMAKE_FIND_ROOT_PATH "${ANDROID_TOOLCHAIN_ROOT}/bin" "${ANDROID_TOOLCHAIN_R
 set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
-
-
-# macro to find packages on the host OS
-macro( find_host_package )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
- if( CMAKE_HOST_WIN32 )
-  SET( WIN32 1 )
-  SET( UNIX )
- elseif( CMAKE_HOST_APPLE )
-  SET( APPLE 1 )
-  SET( UNIX )
- endif()
- find_package( ${ARGN} )
- SET( WIN32 )
- SET( APPLE )
- SET( UNIX 1 )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
-endmacro()
-
-
-# macro to find programs on the host OS
-macro( find_host_program )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
- if( CMAKE_HOST_WIN32 )
-  SET( WIN32 1 )
-  SET( UNIX )
- elseif( CMAKE_HOST_APPLE )
-  SET( APPLE 1 )
-  SET( UNIX )
- endif()
- find_program( ${ARGN} )
- SET( WIN32 )
- SET( APPLE )
- SET( UNIX 1 )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
-endmacro()
-
-
-macro( ANDROID_GET_ABI_RAWNAME TOOLCHAIN_FLAG VAR )
- if( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI" )
-  set( ${VAR} "armeabi" )
- elseif( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI_V7A" )
-  set( ${VAR} "armeabi-v7a" )
- elseif( "${TOOLCHAIN_FLAG}" STREQUAL "X86" )
-  set( ${VAR} "x86" )
- elseif( "${TOOLCHAIN_FLAG}" STREQUAL "MIPS" )
-  set( ${VAR} "mips" )
- else()
-  set( ${VAR} "unknown" )
- endif()
-endmacro()
-
 
 # export toolchain settings for the try_compile() command
 if( NOT PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
