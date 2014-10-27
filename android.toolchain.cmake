@@ -290,6 +290,65 @@ macro( globNdkToolchains AVAILABLE_TOOLCHAIN_VAR AVAIBLE_TOOLCHAINS_LIST TOOLCHA
  endforeach()
 endmacro()
 
+# macro to find packages on the host OS
+macro( find_host_package )
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ if( CMAKE_HOST_WIN32 )
+  SET( WIN32 1 )
+  SET( UNIX )
+ elseif( CMAKE_HOST_APPLE )
+  SET( APPLE 1 )
+  SET( UNIX )
+ endif()
+ find_package( ${ARGN} )
+ SET( WIN32 )
+ SET( APPLE )
+ SET( UNIX 1 )
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+endmacro()
+
+
+# macro to find programs on the host OS
+macro( find_host_program )
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ if( CMAKE_HOST_WIN32 )
+  SET( WIN32 1 )
+  SET( UNIX )
+ elseif( CMAKE_HOST_APPLE )
+  SET( APPLE 1 )
+  SET( UNIX )
+ endif()
+ find_program( ${ARGN} )
+ SET( WIN32 )
+ SET( APPLE )
+ SET( UNIX 1 )
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+endmacro()
+
+# get the abi raw name
+macro( ANDROID_GET_ABI_RAWNAME TOOLCHAIN_FLAG VAR )
+ if( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI" )
+  set( ${VAR} "armeabi" )
+ elseif( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI_V7A" )
+  set( ${VAR} "armeabi-v7a" )
+ elseif( "${TOOLCHAIN_FLAG}" STREQUAL "X86" )
+  set( ${VAR} "x86" )
+ elseif( "${TOOLCHAIN_FLAG}" STREQUAL "MIPS" )
+  set( ${VAR} "mips" )
+ else()
+  set( ${VAR} "unknown" )
+ endif()
+endmacro()
+
+
 ######################################################
 
 
@@ -1302,7 +1361,7 @@ if(NOT CMAKE_IN_TRY_COMPILE)
  set( LIBRARY_OUTPUT_PATH "${CMAKE_INSTALL_PREFIX}/lib" )
 endif()
 
-########################################
+
 # copy shaed stl library to build directory
 if( NOT CMAKE_IN_TRY_COMPILE AND LIB_STL MATCHES "[.]so$" )
  get_filename_component( LIB_STLname "${LIB_STL}" NAME )
@@ -1326,6 +1385,66 @@ set( CMAKE_FIND_ROOT_PATH "${ANDROID_TOOLCHAIN_ROOT}/bin" "${ANDROID_TOOLCHAIN_R
 set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+
+
+# macro to find packages on the host OS
+macro( find_host_package )
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ if( CMAKE_HOST_WIN32 )
+  SET( WIN32 1 )
+  SET( UNIX )
+ elseif( CMAKE_HOST_APPLE )
+  SET( APPLE 1 )
+  SET( UNIX )
+ endif()
+ find_package( ${ARGN} )
+ SET( WIN32 )
+ SET( APPLE )
+ SET( UNIX 1 )
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+endmacro()
+
+
+# macro to find programs on the host OS
+macro( find_host_program )
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ if( CMAKE_HOST_WIN32 )
+  SET( WIN32 1 )
+  SET( UNIX )
+ elseif( CMAKE_HOST_APPLE )
+  SET( APPLE 1 )
+  SET( UNIX )
+ endif()
+ find_program( ${ARGN} )
+ SET( WIN32 )
+ SET( APPLE )
+ SET( UNIX 1 )
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+endmacro()
+
+
+macro( ANDROID_GET_ABI_RAWNAME TOOLCHAIN_FLAG VAR )
+ if( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI" )
+  set( ${VAR} "armeabi" )
+ elseif( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI_V7A" )
+  set( ${VAR} "armeabi-v7a" )
+ elseif( "${TOOLCHAIN_FLAG}" STREQUAL "X86" )
+  set( ${VAR} "x86" )
+ elseif( "${TOOLCHAIN_FLAG}" STREQUAL "MIPS" )
+  set( ${VAR} "mips" )
+ else()
+  set( ${VAR} "unknown" )
+ endif()
+endmacro()
+
 
 # export toolchain settings for the try_compile() command
 if( NOT PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
