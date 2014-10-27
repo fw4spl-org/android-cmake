@@ -1387,6 +1387,7 @@ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 
+########################################
 # export toolchain settings for the try_compile() command
 if( NOT PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
  set( CURRENT_TOOLCHAIN_config "")
@@ -1422,7 +1423,7 @@ if( NOT PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
  unset( CURRENT_TOOLCHAIN_config )
 endif()
 
-
+########################################
 # force cmake to produce / instead of \ in build commands for Ninja generator
 if( CMAKE_GENERATOR MATCHES "Ninja" AND CMAKE_HOST_WIN32 )
  # it is a bad hack after all
@@ -1435,7 +1436,7 @@ if( CMAKE_GENERATOR MATCHES "Ninja" AND CMAKE_HOST_WIN32 )
  unset( MINGW )
 endif()
 
-
+########################################
 # set some obsolete variables for backward compatibility
 set( ANDROID_SET_OBSOLETE_VARIABLES ON CACHE BOOL "Define obsolete Andrid-specific cmake variables" )
 mark_as_advanced( ANDROID_SET_OBSOLETE_VARIABLES )
@@ -1444,3 +1445,5 @@ if( ANDROID_SET_OBSOLETE_VARIABLES )
  set( ARM_TARGET "${ANDROID_ABI}" )
  set( ARMEABI_NDK_NAME "${ANDROID_NDK_ABI_NAME}" )
 endif()
+
+########################################
