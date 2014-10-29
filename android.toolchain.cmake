@@ -55,27 +55,49 @@
 #        "armeabi-v7a with VFPV3" - same as armeabi-v7a, but
 #            sets VFPV3 as floating-point unit (has 32 registers instead of 16).
 #        "armeabi-v6 with VFP" - tuned for ARMv6 processors having VFP.
+#        "arm64-v8a" - matches to the NDK ABI with the same name.
+#           See ${ANDROID_NDK}/docs/CPU-ARCH-ABIS.html for the documentation.
 #        "x86" - matches to the NDK ABI with the same name.
+#            See ${ANDROID_NDK}/docs/CPU-ARCH-ABIS.html for the documentation.
+#        "x86_64" - matches to the NDK ABI with the same name.
 #            See ${ANDROID_NDK}/docs/CPU-ARCH-ABIS.html for the documentation.
 #        "mips" - matches to the NDK ABI with the same name.
 #            See ${ANDROID_NDK}/docs/CPU-ARCH-ABIS.html for the documentation.
+#        "mips64" - matches to the NDK ABI with the same name.
+#            See ${ANDROID_NDK}/docs/CPU-ARCH-ABIS.html for the documentation.
 #
-#    ANDROID_NATIVE_API_LEVEL=android-8 - level of Android API compile for.
+#    ANDROID_NATIVE_API_LEVEL=android-9 - level of Android API compile for.
 #      Option is read-only when standalone toolchain is used.
 #
-#    ANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.6 - the name of compiler
+#    ANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9 - the name of compiler
 #      toolchain to be used. The list of possible values depends on the NDK
-#      version. For NDK r8c the possible values are:
-#
-#        * arm-linux-androideabi-4.4.3
+#      version. For NDK r10c the possible values are:
+#        * aarch64-linux-android-4.9
+#        * aarch64-linux-android-clang3.4
+#        * aarch64-linux-android-clang3.5
 #        * arm-linux-androideabi-4.6
-#        * arm-linux-androideabi-clang3.1
-#        * mipsel-linux-android-4.4.3
+#        * arm-linux-androideabi-4.8
+#        * arm-linux-androideabi-4.9
+#        * arm-linux-androideabi-clang3.4
+#        * arm-linux-androideabi-clang3.5
+#        * llvm-3.4
+#        * llvm-3.5
+#        * mips64el-linux-android-4.9
+#        * mips64el-linux-android-clang3.4
+#        * mips64el-linux-android-clang3.5
 #        * mipsel-linux-android-4.6
-#        * mipsel-linux-android-clang3.1
-#        * x86-4.4.3
+#        * mipsel-linux-android-4.8
+#        * mipsel-linux-android-4.9
+#        * mipsel-linux-android-clang3.4
+#        * mipsel-linux-android-clang3.5
+#        * x86_64-4.9
+#        * x86_64-clang3.4
+#        * x86_64-clang3.5
 #        * x86-4.6
-#        * x86-clang3.1
+#        * x86-4.8
+#        * x86-4.9
+#        * x86-clang3.4
+#        * x86-clang3.5
 #
 #    ANDROID_FORCE_ARM_BUILD=OFF - set ON to generate 32-bit ARM instructions
 #      instead of Thumb. Is not available for "x86" (inapplicable) and
@@ -222,13 +244,13 @@ macro( detectNativeApiLevel CURRENT_VAR CURRENT_PATH )
     
  set( NDK_API_LEVEL_REGEX "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+([0-9]+)[\t ]*$" )
  
- file( STRINGS ${CURRENT_PATH} APIL_FILE_CONTENT REGEX "${NDK_API_LEVEL_REGEX}" )
- if( NOT APIL_FILE_CONTENT )
+ file( STRINGS ${CURRENT_PATH} API_FILE_CONTENT REGEX "${NDK_API_LEVEL_REGEX}" )
+ if( NOT API_FILE_CONTENT )
   message( SEND_ERROR "Could not get Android native API level. Probably you have specified invalid level value, or your copy of NDK/toolchain is broken." )
  endif()
  
- string( REGEX REPLACE "${NDK_API_LEVEL_REGEX}" "\\1" ${CURRENT_VAR} "${APIL_FILE_CONTENT}" )
- unset( APIL_FILE_CONTENT )
+ string( REGEX REPLACE "${NDK_API_LEVEL_REGEX}" "\\1" ${CURRENT_VAR} "${API_FILE_CONTENT}" )
+ unset( API_FILE_CONTENT )
  unset( NDK_API_LEVEL_REGEX )
 endmacro()
 
@@ -256,96 +278,101 @@ endmacro()
 
 # glob NDK toolchain search  
 macro( globNdkToolchains AVAILABLE_TOOLCHAIN_VAR AVAIBLE_TOOLCHAINS_LIST TOOLCHAIN_SUBPATH )
-    
- foreach( CURRENT_TOOLCHAIN ${${AVAIBLE_TOOLCHAINS_LIST}} )
-  if( "${CURRENT_TOOLCHAIN}" MATCHES "-clang3[.][0-9]$" AND NOT EXISTS "${ANDROID_NDK_TOOLCHAINS_PATH}/${CURRENT_TOOLCHAIN}${TOOLCHAIN_SUBPATH}" )
-   string( REGEX REPLACE "-clang3[.][0-9]$" "-4.6" GCC_TOOLCHAIN "${CURRENT_TOOLCHAIN}" )
-  else()
-   set( GCC_TOOLCHAIN "${CURRENT_TOOLCHAIN}" )
-  endif()
-  detectToolchainMachineName( MACHINE "${ANDROID_NDK_TOOLCHAINS_PATH}/${GCC_TOOLCHAIN}${TOOLCHAIN_SUBPATH}" )
-  if( MACHINE )
-   string( REGEX MATCH "[0-9]+[.][0-9]+([.][0-9x]+)?$" VERSION "${GCC_TOOLCHAIN}" )
-   #message(" machine = ${MACHINE}")
-   if( MACHINE MATCHES i686 )
-    set( ARCH "x86" )
-   elseif( MACHINE MATCHES arm )
-    set( ARCH "arm" )
-   elseif( MACHINE MATCHES mipsel ) 
-    set( ARCH "mipsel" )
-    
-    #Added for NDK 10
-   elseif( MACHINE MATCHES mips64el )
-     set( ARCH "mips64el" )
-   elseif( MACHINE MATCHES aarch64 )
-    set( ARCH "aarch64" )
-   endif()
+    foreach( CURRENT_TOOLCHAIN ${${AVAIBLE_TOOLCHAINS_LIST}} )
+        if( "${CURRENT_TOOLCHAIN}" MATCHES "-clang3[.][0-9]$" AND NOT EXISTS "${ANDROID_NDK_TOOLCHAINS_PATH}/${CURRENT_TOOLCHAIN}${TOOLCHAIN_SUBPATH}" )
+            string( REGEX REPLACE "-clang3[.][0-9]$" "-4.6" GCC_TOOLCHAIN "${CURRENT_TOOLCHAIN}" )
+        else()
+            set( GCC_TOOLCHAIN "${CURRENT_TOOLCHAIN}" )
+        endif()
+        detectToolchainMachineName( MACHINE "${ANDROID_NDK_TOOLCHAINS_PATH}/${GCC_TOOLCHAIN}${TOOLCHAIN_SUBPATH}" )
+        if( MACHINE )
+            string( REGEX MATCH "[0-9]+[.][0-9]+([.][0-9x]+)?$" VERSION "${GCC_TOOLCHAIN}" )
+
+            if( MACHINE MATCHES i686 )
+                set( ARCH "x86" )
+            elseif( MACHINE MATCHES x86_64 )
+                set( ARCH "x86_64" )
+            elseif( MACHINE MATCHES arm )
+                set( ARCH "arm" )
+            elseif( MACHINE MATCHES aarch64 )
+                set( ARCH "aarch64" )
+            elseif( MACHINE MATCHES mipsel ) 
+                set( ARCH "mipsel" )
+            elseif( MACHINE MATCHES mips64el ) 
+                set( ARCH "mips64el" )
+            endif()
    
-   list( APPEND AVAILABLE_TOOLCHAIN_MACHINES "${MACHINE}" )
-   list( APPEND AVAILABLE_TOOLCHAIN_ARCHS "${ARCH}" )
-   list( APPEND AVAILABLE_TOOLCHAIN_COMPILER_VERSION "${VERSION}" )
-   list( APPEND ${AVAILABLE_TOOLCHAIN_VAR} "${CURRENT_TOOLCHAIN}" )
-  endif()
-  unset( GCC_TOOLCHAIN )
- endforeach()
+            list( APPEND AVAILABLE_TOOLCHAIN_MACHINES "${MACHINE}" )
+            list( APPEND AVAILABLE_TOOLCHAIN_ARCHS "${ARCH}" )
+            list( APPEND AVAILABLE_TOOLCHAIN_COMPILER_VERSION "${VERSION}" )
+            list( APPEND ${AVAILABLE_TOOLCHAIN_VAR} "${CURRENT_TOOLCHAIN}" )
+        endif()
+        unset( GCC_TOOLCHAIN )
+    endforeach()
 endmacro()
 
 # macro to find packages on the host OS
 macro( find_host_package )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
- if( CMAKE_HOST_WIN32 )
-  SET( WIN32 1 )
-  SET( UNIX )
- elseif( CMAKE_HOST_APPLE )
-  SET( APPLE 1 )
-  SET( UNIX )
- endif()
- find_package( ${ARGN} )
- SET( WIN32 )
- SET( APPLE )
- SET( UNIX 1 )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+    set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+    set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
+    set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+    if( CMAKE_HOST_WIN32 )
+        SET( WIN32 1 )
+        SET( UNIX )
+    elseif( CMAKE_HOST_APPLE )
+        SET( APPLE 1 )
+        SET( UNIX )
+    endif()
+    find_package( ${ARGN} )
+    SET( WIN32 )
+    SET( APPLE )
+    SET( UNIX 1 )
+    set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
+    set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
+    set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 endmacro()
 
 
 # macro to find programs on the host OS
 macro( find_host_program )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
- if( CMAKE_HOST_WIN32 )
-  SET( WIN32 1 )
-  SET( UNIX )
- elseif( CMAKE_HOST_APPLE )
-  SET( APPLE 1 )
-  SET( UNIX )
- endif()
- find_program( ${ARGN} )
- SET( WIN32 )
- SET( APPLE )
- SET( UNIX 1 )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+    set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+    set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
+    set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+    if( CMAKE_HOST_WIN32 )
+        SET( WIN32 1 )
+        SET( UNIX )
+    elseif( CMAKE_HOST_APPLE )
+        SET( APPLE 1 )
+        SET( UNIX )
+    endif()
+    find_program( ${ARGN} )
+    SET( WIN32 )
+    SET( APPLE )
+    SET( UNIX 1 )
+    set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
+    set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
+    set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 endmacro()
 
 # get the abi raw name
 macro( ANDROID_GET_ABI_RAWNAME TOOLCHAIN_FLAG VAR )
- if( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI" )
-  set( ${VAR} "armeabi" )
- elseif( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI_V7A" )
-  set( ${VAR} "armeabi-v7a" )
- elseif( "${TOOLCHAIN_FLAG}" STREQUAL "X86" )
-  set( ${VAR} "x86" )
- elseif( "${TOOLCHAIN_FLAG}" STREQUAL "MIPS" )
-  set( ${VAR} "mips" )
- else()
-  set( ${VAR} "unknown" )
- endif()
+    if( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI" )
+        set( ${VAR} "armeabi" )
+    elseif( "${TOOLCHAIN_FLAG}" STREQUAL "ARM64_V8A" )
+        set( ${VAR} "arm64-v8a" )
+    elseif( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI_V7A" )
+        set( ${VAR} "armeabi-v7a" )
+    elseif( "${TOOLCHAIN_FLAG}" STREQUAL "X86" )
+        set( ${VAR} "x86" )
+    elseif( "${TOOLCHAIN_FLAG}" STREQUAL "X86_64" )
+        set( ${VAR} "x86_64" )
+    elseif( "${TOOLCHAIN_FLAG}" STREQUAL "MIPS" )
+        set( ${VAR} "mips" )
+    elseif( "${TOOLCHAIN_FLAG}" STREQUAL "MIPS64" )
+        set( ${VAR} "mips64" )
+    else()
+        set( ${VAR} "unknown" )
+    endif()
 endmacro()
 
 
@@ -388,13 +415,21 @@ endif()
 
 # set supported android ABIS (Application Binary Interface)
 set( ANDROID_SUPPORTED_ABIS_arm "armeabi-v7a;armeabi;armeabi-v7a with NEON;armeabi-v7a with VFPV3;armeabi-v6 with VFP" )
+set( ANDROID_SUPPORTED_ABIS_aarch64 "arm64-v8a" )
 set( ANDROID_SUPPORTED_ABIS_x86 "x86" )
+set( ANDROID_SUPPORTED_ABIS_x86_64 "x86_64" )
 set( ANDROID_SUPPORTED_ABIS_mipsel "mips" )
+set( ANDROID_SUPPORTED_ABIS_mips64el "mips64" )
 
 # Minimum is set to 9 because lower API level make boost compilation crash
 set( ANDROID_DEFAULT_NDK_API_LEVEL 9 )
-set( ANDROID_DEFAULT_NDK_API_LEVEL_x86 9 )
-set( ANDROID_DEFAULT_NDK_API_LEVEL_mips 9 )
+set( ANDROID_DEFAULT_NDK_API_LEVEL_arm 19 )
+set( ANDROID_DEFAULT_NDK_API_LEVEL_x86 19 )
+set( ANDROID_DEFAULT_NDK_API_LEVEL_mips 19 )
+set( ANDROID_DEFAULT_NDK_API_LEVEL_arm64 21 )
+set( ANDROID_DEFAULT_NDK_API_LEVEL_x86_64 21 )
+set( ANDROID_DEFAULT_NDK_API_LEVEL_mips64 21 )
+
 
 # Init NDK varialbe
 initVariable( ANDROID_NDK PATH ENV_ANDROID_NDK )
@@ -561,15 +596,16 @@ endif()
 ########################################
 # choose target ABI
 initVariable( ANDROID_ABI OBSOLETE_ARM_TARGET OBSOLETE_ARM_TARGETS VALUES ${ANDROID_SUPPORTED_ABIS} )
+
 # verify that target ABI is supported
-list( FIND ANDROID_SUPPORTED_ABIS "${ANDROID_ABI}" __androidAbiIdx )
-if( __androidAbiIdx EQUAL -1 )
+list( FIND ANDROID_SUPPORTED_ABIS "${ANDROID_ABI}" ANDROID_ABI_INDEX )
+if( ANDROID_ABI_INDEX EQUAL -1 )
  string( REPLACE ";" "\", \"" PRINTABLE_ANDROID_SUPPORTED_ABIS  "${ANDROID_SUPPORTED_ABIS}" )
  message( FATAL_ERROR "Specified ANDROID_ABI = \"${ANDROID_ABI}\" is not supported by this cmake toolchain or your NDK/toolchain.
    Supported values are: \"${PRINTABLE_ANDROID_SUPPORTED_ABIS}\"
    " )
 endif()
-unset( __androidAbiIdx )
+unset( ANDROID_ABI_INDEX )
 
 ########################################
 # set target ABI options
@@ -580,6 +616,13 @@ if( ANDROID_ABI STREQUAL "x86" )
  set( ANDROID_ARCH_FULLNAME "x86" )
  set( ANDROID_LLVM_TRIPLE "i686-none-linux-android" )
  set( CMAKE_SYSTEM_PROCESSOR "i686" )
+elseif( ANDROID_ABI STREQUAL "x86_64" )
+  set( X86_64 true )
+  set( ANDROID_NDK_ABI_NAME "x86_64" )
+  set( ANDROID_ARCH_NAME "x86_64" )
+  set( ANDROID_ARCH_FULLNAME "x86_64" )
+  set( ANDROID_LLVM_TRIPLE "x86_64-none-linux-android" )
+  set( CMAKE_SYSTEM_PROCESSOR "x86_64" )
 elseif( ANDROID_ABI STREQUAL "mips" )
  set( MIPS true )
  set( ANDROID_NDK_ABI_NAME "mips" )
@@ -587,6 +630,13 @@ elseif( ANDROID_ABI STREQUAL "mips" )
  set( ANDROID_ARCH_FULLNAME "mipsel" )
  set( ANDROID_LLVM_TRIPLE "mipsel-none-linux-android" )
  set( CMAKE_SYSTEM_PROCESSOR "mips" )
+elseif( ANDROID_ABI STREQUAL "mips64" )
+  set( MIPS64 true )
+  set( ANDROID_NDK_ABI_NAME "mips64" )
+  set( ANDROID_ARCH_NAME "mips64" )
+  set( ANDROID_ARCH_FULLNAME "mips64el" )
+  set( ANDROID_LLVM_TRIPLE "mips64el-none-linux-android" )
+  set( CMAKE_SYSTEM_PROCESSOR "mips64" )
 elseif( ANDROID_ABI STREQUAL "armeabi" )
  set( ARMEABI true )
  set( ANDROID_NDK_ABI_NAME "armeabi" )
@@ -627,6 +677,15 @@ elseif( ANDROID_ABI STREQUAL "armeabi-v7a with NEON" )
  set( CMAKE_SYSTEM_PROCESSOR "armv7-a" )
  set( VFPV3 true )
  set( NEON true )
+elseif( ANDROID_ABI STREQUAL "arm64-v8a" )
+  set( ARM64_V8A true )
+  set( ANDROID_NDK_ABI_NAME "arm64-v8a" )
+  set( ANDROID_ARCH_NAME "arm64" )
+  set( ANDROID_ARCH_FULLNAME "aarch64" )
+  set( ANDROID_LLVM_TRIPLE "armv8-none-linux-androideabi" )
+  set( CMAKE_SYSTEM_PROCESSOR "aarch64" )
+  set( VFPV3 true )
+  set( NEON true )
 else()
  message( SEND_ERROR "Unknown ANDROID_ABI=\"${ANDROID_ABI}\" is specified." )
 endif()
@@ -695,6 +754,7 @@ unset( AVAILABLE_TOOLCHAIN_COMPILER_VERSION )
 ########################################
 # choose native API level
 initVariable( ANDROID_NATIVE_API_LEVEL ENV_ANDROID_NATIVE_API_LEVEL ANDROID_API_LEVEL ENV_ANDROID_API_LEVEL ANDROID_STANDALONE_TOOLCHAIN_API_LEVEL ANDROID_DEFAULT_NDK_API_LEVEL_${ANDROID_ARCH_NAME} ANDROID_DEFAULT_NDK_API_LEVEL )
+
 string( REGEX MATCH "[0-9]+" ANDROID_NATIVE_API_LEVEL "${ANDROID_NATIVE_API_LEVEL}" )
 # adjust API level
 set( REAL_API_LEVEL  ${ANDROID_DEFAULT_NDK_API_LEVEL_${ANDROID_ARCH_NAME}} )
@@ -704,8 +764,8 @@ foreach( LEVEL ${ANDROID_SUPPORTED_NATIVE_API_LEVELS} )
  endif()
 endforeach()
 if( REAL_API_LEVEL  AND NOT ANDROID_NATIVE_API_LEVEL EQUAL REAL_API_LEVEL  )
- message( STATUS "Adjusting Android API level 'android-${ANDROID_NATIVE_API_LEVEL}' to 'android-${REAL_API_LEVEL }'")
- set( ANDROID_NATIVE_API_LEVEL ${REAL_API_LEVEL } )
+ message( STATUS "Adjusting Android API level 'android-${ANDROID_NATIVE_API_LEVEL}' to 'android-${REAL_API_LEVEL}'")
+ set( ANDROID_NATIVE_API_LEVEL ${REAL_API_LEVEL} )
 endif()
 unset(REAL_API_LEVEL )
 # validate
@@ -727,6 +787,7 @@ else()
  endif()
 endif()
 unset( LEVEL_INDEX )
+
 
 ########################################
 # remember target ABI
@@ -997,18 +1058,26 @@ endif()
 include( CMakeForceCompiler )
 CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
 if( ANDROID_COMPILER_IS_CLANG )
- set( CMAKE_C_COMPILER_ID Clang)
+    set( CMAKE_C_COMPILER_ID Clang)
 endif()
 set( CMAKE_C_PLATFORM_ID Linux )
-set( CMAKE_C_SIZEOF_DATA_PTR 4 )
+if( ARM64_V8A OR X86_64 OR MIPS64 )
+    set( CMAKE_CXX_SIZEOF_DATA_PTR 8 )
+else()
+    set( CMAKE_CXX_SIZEOF_DATA_PTR 4 )
+endif()
 set( CMAKE_C_HAS_ISYSROOT 1 )
 set( CMAKE_C_COMPILER_ABI ELF )
 CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
 if( ANDROID_COMPILER_IS_CLANG )
- set( CMAKE_CXX_COMPILER_ID Clang)
+    set( CMAKE_CXX_COMPILER_ID Clang)
 endif()
 set( CMAKE_CXX_PLATFORM_ID Linux )
-set( CMAKE_CXX_SIZEOF_DATA_PTR 4 )
+if( ARM64_V8A OR X86_64 OR MIPS64 )
+    set( CMAKE_CXX_SIZEOF_DATA_PTR 8 )
+else()
+    set( CMAKE_CXX_SIZEOF_DATA_PTR 4 )
+endif()
 set( CMAKE_CXX_HAS_ISYSROOT 1 )
 set( CMAKE_CXX_COMPILER_ABI ELF )
 set( CMAKE_CXX_SOURCE_FILE_EXTENSIONS cc cp cxx cpp CPP c++ C )
@@ -1052,118 +1121,120 @@ endif()
 ########################################
 # NDK flags
 if( ARMEABI OR ARMEABI_V7A )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fpic -funwind-tables" )
- if( NOT ANDROID_FORCE_ARM_BUILD AND NOT ARMEABI_V6 )
-  set( ANDROID_CXX_FLAGS_RELEASE "-mthumb -fomit-frame-pointer -fno-strict-aliasing" )
-  set( ANDROID_CXX_FLAGS_DEBUG   "-marm -fno-omit-frame-pointer -fno-strict-aliasing" )
-  if( NOT ANDROID_COMPILER_IS_CLANG )
-   set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -finline-limit=64" )
-  endif()
- else()
-  # always compile ARMEABI_V6 in arm mode; otherwise there is no difference from ARMEABI
-  set( ANDROID_CXX_FLAGS_RELEASE "-marm -fomit-frame-pointer -fstrict-aliasing" )
-  set( ANDROID_CXX_FLAGS_DEBUG   "-marm -fno-omit-frame-pointer -fno-strict-aliasing" )
-  if( NOT ANDROID_COMPILER_IS_CLANG )
-   set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -funswitch-loops -finline-limit=300" )
-  endif()
- endif()
-elseif( X86 )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -funwind-tables" )
- if( NOT ANDROID_COMPILER_IS_CLANG )
-  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -funswitch-loops -finline-limit=300" )
- else()
-  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fPIC" )
- endif()
- set( ANDROID_CXX_FLAGS_RELEASE "-fomit-frame-pointer -fstrict-aliasing" )
- set( ANDROID_CXX_FLAGS_DEBUG   "-fno-omit-frame-pointer -fno-strict-aliasing" )
-elseif( MIPS )
- set( ANDROID_CXX_FLAGS         "${ANDROID_CXX_FLAGS} -fpic -fno-strict-aliasing -finline-functions -ffunction-sections -funwind-tables -fmessage-length=0" )
- set( ANDROID_CXX_FLAGS_RELEASE "-fomit-frame-pointer" )
- set( ANDROID_CXX_FLAGS_DEBUG   "-fno-omit-frame-pointer" )
- if( NOT ANDROID_COMPILER_IS_CLANG )
-  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fno-inline-functions-called-once -fgcse-after-reload -frerun-cse-after-loop -frename-registers" )
-  set( ANDROID_CXX_FLAGS_RELEASE "${ANDROID_CXX_FLAGS_RELEASE} -funswitch-loops -finline-limit=300" )
- endif()
+    set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fpic -funwind-tables" )
+    if( NOT ANDROID_FORCE_ARM_BUILD AND NOT ARMEABI_V6 )
+        set( ANDROID_CXX_FLAGS_RELEASE "-mthumb -fomit-frame-pointer -fno-strict-aliasing" )
+        set( ANDROID_CXX_FLAGS_DEBUG   "-marm -fno-omit-frame-pointer -fno-strict-aliasing" )
+        if( NOT ANDROID_COMPILER_IS_CLANG )
+            set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -finline-limit=64" )
+        endif()
+    else()
+        # always compile ARMEABI_V6 in arm mode; otherwise there is no difference from ARMEABI
+        set( ANDROID_CXX_FLAGS_RELEASE "-marm -fomit-frame-pointer -fstrict-aliasing" )
+        set( ANDROID_CXX_FLAGS_DEBUG   "-marm -fno-omit-frame-pointer -fno-strict-aliasing" )
+        if( NOT ANDROID_COMPILER_IS_CLANG )
+            set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -funswitch-loops -finline-limit=300" )
+        endif()
+    endif()
+elseif( X86 OR X86_64)
+    set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -funwind-tables" )
+    if( NOT ANDROID_COMPILER_IS_CLANG )
+        set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -funswitch-loops -finline-limit=300" )
+    else()
+        set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fPIC" )
+    endif()
+    set( ANDROID_CXX_FLAGS_RELEASE "-fomit-frame-pointer -fstrict-aliasing" )
+    set( ANDROID_CXX_FLAGS_DEBUG   "-fno-omit-frame-pointer -fno-strict-aliasing" )
+elseif( MIPS OR MIPS64 )
+    set( ANDROID_CXX_FLAGS         "${ANDROID_CXX_FLAGS} -fpic -fno-strict-aliasing -finline-functions -ffunction-sections -funwind-tables -fmessage-length=0" )
+    set( ANDROID_CXX_FLAGS_RELEASE "-fomit-frame-pointer" )
+    set( ANDROID_CXX_FLAGS_DEBUG   "-fno-omit-frame-pointer" )
+    if( NOT ANDROID_COMPILER_IS_CLANG )
+        set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fno-inline-functions-called-once -fgcse-after-reload -frerun-cse-after-loop -frename-registers" )
+        set( ANDROID_CXX_FLAGS_RELEASE "${ANDROID_CXX_FLAGS_RELEASE} -funswitch-loops -finline-limit=300" )
+    endif()
 elseif()
- set( ANDROID_CXX_FLAGS_RELEASE "" )
- set( ANDROID_CXX_FLAGS_DEBUG   "" )
+    set( ANDROID_CXX_FLAGS_RELEASE "" )
+    set( ANDROID_CXX_FLAGS_DEBUG   "" )
 endif()
 
 set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fsigned-char" ) # good/necessary when porting desktop libraries
 
 if( NOT X86 AND NOT ANDROID_COMPILER_IS_CLANG )
- set( ANDROID_CXX_FLAGS "-Wno-psabi ${ANDROID_CXX_FLAGS}" )
+    set( ANDROID_CXX_FLAGS "-Wno-psabi ${ANDROID_CXX_FLAGS}" )
 endif()
 
 if( NOT ANDROID_COMPILER_VERSION VERSION_LESS "4.6" )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -no-canonical-prefixes" ) # see https://android-review.googlesource.com/#/c/47564/
+    set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -no-canonical-prefixes" ) # see https://android-review.googlesource.com/#/c/47564/
 endif()
 
 ########################################
 # ABI-specific flags
 if( ARMEABI_V7A )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv7-a -mfloat-abi=softfp" )
- if( NEON )
-  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=neon" )
- elseif( VFPV3 )
-  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=vfpv3" )
- else()
-  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=vfpv3-d16" )
- endif()
+    set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv7-a -mfloat-abi=softfp" )
+    if( NEON )
+        set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=neon" )
+    elseif( VFPV3 )
+        set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=vfpv3" )
+    else()
+        set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=vfpv3-d16" )
+    endif()
 elseif( ARMEABI_V6 )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv6 -mfloat-abi=softfp -mfpu=vfp" ) # vfp == vfpv2
+    set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv6 -mfloat-abi=softfp -mfpu=vfp" ) # vfp == vfpv2
 elseif( ARMEABI )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv5te -mtune=xscale -msoft-float" )
+    set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv5te -mtune=xscale -msoft-float" )
+elseif( ARM64_V8A )
+    set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv8-a" )
 endif()
 
 if( ANDROID_STL MATCHES "gnustl" AND (EXISTS "${LIB_STL}" OR EXISTS "${LIB_SUPCXX}") )
- set( CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
- set( CMAKE_CXX_CREATE_SHARED_MODULE  "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
- set( CMAKE_CXX_LINK_EXECUTABLE       "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
+    set( CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+    set( CMAKE_CXX_CREATE_SHARED_MODULE  "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+    set( CMAKE_CXX_LINK_EXECUTABLE       "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
 else()
- set( CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_CXX_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
- set( CMAKE_CXX_CREATE_SHARED_MODULE  "<CMAKE_CXX_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
- set( CMAKE_CXX_LINK_EXECUTABLE       "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
+    set( CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_CXX_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+    set( CMAKE_CXX_CREATE_SHARED_MODULE  "<CMAKE_CXX_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+    set( CMAKE_CXX_LINK_EXECUTABLE       "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
 endif()
 
 ########################################
 # STL
 if( EXISTS "${LIB_STL}" OR EXISTS "${LIB_SUPCXX}" )
- if( EXISTS "${LIB_STL}" )
-  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${LIB_STL}\"" )
-  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${LIB_STL}\"" )
-  set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} \"${LIB_STL}\"" )
- endif()
- if( EXISTS "${LIB_SUPCXX}" )
-  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${LIB_SUPCXX}\"" )
-  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${LIB_SUPCXX}\"" )
-  set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} \"${LIB_SUPCXX}\"" )
-  # C objects:
-  set( CMAKE_C_CREATE_SHARED_LIBRARY "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_C_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
-  set( CMAKE_C_CREATE_SHARED_MODULE  "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_C_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
-  set( CMAKE_C_LINK_EXECUTABLE       "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
-  set( CMAKE_C_CREATE_SHARED_LIBRARY "${CMAKE_C_CREATE_SHARED_LIBRARY} \"${LIB_SUPCXX}\"" )
-  set( CMAKE_C_CREATE_SHARED_MODULE  "${CMAKE_C_CREATE_SHARED_MODULE} \"${LIB_SUPCXX}\"" )
-  set( CMAKE_C_LINK_EXECUTABLE       "${CMAKE_C_LINK_EXECUTABLE} \"${LIB_SUPCXX}\"" )
- endif()
- if( ANDROID_STL MATCHES "gnustl" )
-  if( NOT EXISTS "${ANDROID_LIBM_PATH}" )
-   set( ANDROID_LIBM_PATH -lm )
-  endif()
-  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} ${ANDROID_LIBM_PATH}" )
-  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} ${ANDROID_LIBM_PATH}" )
-  set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} ${ANDROID_LIBM_PATH}" )
- endif()
+    if( EXISTS "${LIB_STL}" )
+        set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${LIB_STL}\"" )
+        set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${LIB_STL}\"" )
+        set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} \"${LIB_STL}\"" )
+    endif()
+    if( EXISTS "${LIB_SUPCXX}" )
+        set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${LIB_SUPCXX}\"" )
+        set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${LIB_SUPCXX}\"" )
+        set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} \"${LIB_SUPCXX}\"" )
+        # C objects:
+        set( CMAKE_C_CREATE_SHARED_LIBRARY "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_C_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+        set( CMAKE_C_CREATE_SHARED_MODULE  "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_C_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+        set( CMAKE_C_LINK_EXECUTABLE       "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
+        set( CMAKE_C_CREATE_SHARED_LIBRARY "${CMAKE_C_CREATE_SHARED_LIBRARY} \"${LIB_SUPCXX}\"" )
+        set( CMAKE_C_CREATE_SHARED_MODULE  "${CMAKE_C_CREATE_SHARED_MODULE} \"${LIB_SUPCXX}\"" )
+        set( CMAKE_C_LINK_EXECUTABLE       "${CMAKE_C_LINK_EXECUTABLE} \"${LIB_SUPCXX}\"" )
+    endif()
+    if( ANDROID_STL MATCHES "gnustl" )
+        if( NOT EXISTS "${ANDROID_LIBM_PATH}" )
+            set( ANDROID_LIBM_PATH -lm )
+        endif()
+        set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} ${ANDROID_LIBM_PATH}" )
+        set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} ${ANDROID_LIBM_PATH}" )
+        set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} ${ANDROID_LIBM_PATH}" )
+    endif()
 endif()
 
 ########################################
 # variables controlling optional build flags
 if (ANDROID_NDK_RELEASE STRLESS "r7")
- # libGLESv2.so in NDK's prior to r7 refers to missing external symbols.
- # So this flag option is required for all projects using OpenGL from native.
- initVariable( ANDROID_SO_UNDEFINED                      VALUES ON )
+    # libGLESv2.so in NDK's prior to r7 refers to missing external symbols.
+    # So this flag option is required for all projects using OpenGL from native.
+    initVariable( ANDROID_SO_UNDEFINED                      VALUES ON )
 else()
- initVariable( ANDROID_SO_UNDEFINED                      VALUES OFF )
+    initVariable( ANDROID_SO_UNDEFINED                      VALUES OFF )
 endif()
 initVariable( ANDROID_NO_UNDEFINED OBSOLETE_NO_UNDEFINED VALUES ON )
 initVariable( ANDROID_FUNCTION_LEVEL_LINKING             VALUES ON )
