@@ -788,6 +788,8 @@ else()
 endif()
 unset( LEVEL_INDEX )
 
+set (ANDROID_ARCH_NAME "${ANDROID_ARCH_NAME}" CACHE INTERNAL "The arch name for Android." FORCE )
+
 
 ########################################
 # remember target ABI
