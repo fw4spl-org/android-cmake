@@ -12,10 +12,6 @@ if len(sys.argv) > 1 :
 if len(sys.argv) > 2 :
     ACTIVITY_NAME = sys.argv[2]
 
-### FIXME
-# ANDROID_APK_PACKAGE     = "org.qtproject.example.openglwindow"
-# ACTIVITY_NAME           = "org.qtproject.qt5.android.bindings.QtActivity"
-
 ###########################################################################################################################################################################################
 CMD_FORCEQUIT_PROCESS   = "adb shell am force-stop " + ANDROID_APK_PACKAGE
 CMD_START_PROCESS       = "adb shell am start " + ANDROID_APK_PACKAGE + "/" + ACTIVITY_NAME
@@ -50,10 +46,6 @@ print " ==> Forward host port to remote unix pipe : "
 print "\t" + CMD_FORWARD_PORT_TO_PIPE + "\n"
 subprocess.call(CMD_FORWARD_PORT_TO_PIPE)   
 
-### FIXME
-# subprocess.call("adb forward tcp:20002 localabstract:" + ANDROID_APK_PACKAGE + ".ping_pong_socket")
-# CMD_GDBSERVER_ATTACH        =   'adb shell am start -n ' + ANDROID_APK_PACKAGE + '/'  + ACTIVITY_NAME + ' -e debug_ping true -e ping_socket ' + ANDROID_APK_PACKAGE + '.ping_pong_socket -e gdbserver_command "/data/data/' + ANDROID_APK_PACKAGE + '/lib/libgdbserver.so --multi +/data/data/' + ANDROID_APK_PACKAGE + '/debug-socket" -e gdbserver_socket /data/data/' + ANDROID_APK_PACKAGE + '/debug-socket' 
-
 print "\n"
 print " ==> Attach gdbserver to the right process : "
 print "\t" + CMD_GDBSERVER_ATTACH + "\n"
@@ -62,6 +54,4 @@ subprocess.call(CMD_GDBSERVER_ATTACH)
 
 
 ###########################################################################################################################################################################################
-
-# set auto-solib-add on
-# set solib-search-path c:/Tmp/Nexus-10/system/lib;c:/Tmp/Nexus-10/vendor/lib;c:/Tmp/Nexus-10/;c:/test/FW4SPL/Install/Android/Debug/lib;c:/test/FW4SPL/Install/Android/Debug/apk/libs/armeabi-v7a
+ 
