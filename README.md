@@ -13,6 +13,7 @@ system may easily compile native code for Android.
 Also, used by the OpenCV project: http://opencv.org/android
 
 **Modification:**
+- Add a Python script to start the app on the device and have gdbserver attached to it, listening for connections from gdb on host 
 - Standalone support has been removed
 - You only have to set INSTALL_PREFIX_PATH, the other output paths that will be set automatically from this one
 - You can set directly the toolchain in the main CMakeLists.txt of your project like this:
