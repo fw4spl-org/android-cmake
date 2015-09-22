@@ -295,7 +295,7 @@ macro( globNdkToolchains AVAILABLE_TOOLCHAIN_VAR AVAIBLE_TOOLCHAINS_LIST TOOLCHA
             elseif( MACHINE MATCHES arm )
                 set( ARCH "arm" )
             elseif( MACHINE MATCHES aarch64 )
-                set( ARCH "arm64" )
+                set( ARCH "aarch64" )
             elseif( MACHINE MATCHES mipsel ) 
                 set( ARCH "mipsel" )
             elseif( MACHINE MATCHES mips64el ) 
@@ -681,7 +681,7 @@ elseif( ANDROID_ABI STREQUAL "arm64-v8a" )
   set( ARM64_V8A true )
   set( ANDROID_NDK_ABI_NAME "arm64-v8a" )
   set( ANDROID_ARCH_NAME "arm64" )
-  set( ANDROID_ARCH_FULLNAME "arm64" )
+  set( ANDROID_ARCH_FULLNAME "aarch64" )
   set( ANDROID_LLVM_TRIPLE "armv8-none-linux-androideabi" )
   set( CMAKE_SYSTEM_PROCESSOR "armv8-a" )
   set( VFPV3 true )
@@ -795,8 +795,8 @@ set (ANDROID_ARCH_NAME "${ANDROID_ARCH_NAME}" CACHE INTERNAL "The arch name for 
 # remember target ABI
 set( ANDROID_ABI "${ANDROID_ABI}" CACHE STRING "The target ABI for Android. If arm, then armeabi-v7a is recommended for hardware floating point." FORCE )
 if( CMAKE_VERSION VERSION_GREATER "2.8" )
- list( SORT ANDROID_SUPPORTED_ABIS_${ANDROID_ARCH_FULLNAME} )
- set_property( CACHE ANDROID_ABI PROPERTY STRINGS ${ANDROID_SUPPORTED_ABIS_${ANDROID_ARCH_FULLNAME}} )
+ list( SORT ANDROID_SUPPORTED_ABIS )
+ set_property( CACHE ANDROID_ABI PROPERTY STRINGS ${ANDROID_SUPPORTED_ABIS} )
 endif()
 
 ########################################
@@ -1126,14 +1126,21 @@ if( ARMEABI OR ARMEABI_V7A OR ARM64_V8A)
     set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fpic -funwind-tables" )
     if( NOT ANDROID_FORCE_ARM_BUILD AND NOT ARMEABI_V6 )
         set( ANDROID_CXX_FLAGS_RELEASE "-mthumb -fomit-frame-pointer -fno-strict-aliasing" )
-        set( ANDROID_CXX_FLAGS_DEBUG   "-marm -fno-omit-frame-pointer -fno-strict-aliasing" )
+        set( ANDROID_CXX_FLAGS_DEBUG   "-fno-omit-frame-pointer -fno-strict-aliasing" )
+        if(NOT ARM64_V8)
+            set( ANDROID_CXX_FLAGS_DEBUG "${ANDROID_CXX_FLAGS_DEBUG} -marm" )
+        endif()
         if( NOT ANDROID_COMPILER_IS_CLANG )
             set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -finline-limit=64" )
         endif()
     else()
         # always compile ARMEABI_V6 in arm mode; otherwise there is no difference from ARMEABI
-        set( ANDROID_CXX_FLAGS_RELEASE "-marm -fomit-frame-pointer -fstrict-aliasing" )
-        set( ANDROID_CXX_FLAGS_DEBUG   "-marm -fno-omit-frame-pointer -fno-strict-aliasing" )
+        set( ANDROID_CXX_FLAGS_RELEASE "-fomit-frame-pointer -fstrict-aliasing" )
+        set( ANDROID_CXX_FLAGS_DEBUG   "-fno-omit-frame-pointer -fno-strict-aliasing" )
+        if(NOT ARM64_V8A)
+            set( ANDROID_CXX_FLAGS_RELEASE "${ANDROID_CXX_FLAGS_RELEASE} -marm" )
+            set( ANDROID_CXX_FLAGS_DEBUG "${ANDROID_CXX_FLAGS_DEBUG} -marm" )
+        endif()
         if( NOT ANDROID_COMPILER_IS_CLANG )
             set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -funswitch-loops -finline-limit=300" )
         endif()
@@ -1463,37 +1470,40 @@ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 ########################################
 # export toolchain settings for the try_compile() command
 if( NOT PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
- set( CURRENT_TOOLCHAIN_config "")
- foreach( CURRENT_VAR NDK_CCACHE  CMAKE_INSTALL_PREFIX  ANDROID_FORBID_SYGWIN  ANDROID_SET_OBSOLETE_VARIABLES
-                ANDROID_NDK_HOST_X64
-                ANDROID_NDK
-                ANDROID_NDK_LAYOUT
-                ANDROID_STANDALONE_TOOLCHAIN
-                ANDROID_TOOLCHAIN_NAME
-                ANDROID_ABI
-                ANDROID_NATIVE_API_LEVEL
-                ANDROID_STL
-                ANDROID_STL_FORCE_FEATURES
-                ANDROID_FORCE_ARM_BUILD
-                ANDROID_NO_UNDEFINED
-                ANDROID_SO_UNDEFINED
-                ANDROID_FUNCTION_LEVEL_LINKING
-                ANDROID_GOLD_LINKER
-                ANDROID_NOEXECSTACK
-                ANDROID_RELRO
-                ANDROID_LIBM_PATH
-                ANDROID_EXPLICIT_CRT_LINK
-                )
-  if( DEFINED ${CURRENT_VAR} )
-   if( "${CURRENT_VAR}" MATCHES " ")
-    set( CURRENT_TOOLCHAIN_config "${CURRENT_TOOLCHAIN_config}set( ${CURRENT_VAR} \"${${CURRENT_VAR}}\" CACHE INTERNAL \"\" )\n" )
-   else()
-    set( CURRENT_TOOLCHAIN_config "${CURRENT_TOOLCHAIN_config}set( ${CURRENT_VAR} ${${CURRENT_VAR}} CACHE INTERNAL \"\" )\n" )
-   endif()
-  endif()
- endforeach()
- file( WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/android.toolchain.config.cmake" "${CURRENT_TOOLCHAIN_config}" )
- unset( CURRENT_TOOLCHAIN_config )
+    set( CURRENT_TOOLCHAIN_config "")
+    foreach( CMAKE_INSTALL_PREFIX
+        CURRENT_VAR NDK_CCACHE
+        ANDROID_FORBID_SYGWIN  
+        ANDROID_SET_OBSOLETE_VARIABLES
+        ANDROID_NDK_HOST_X64
+        ANDROID_NDK
+        ANDROID_NDK_LAYOUT
+        ANDROID_STANDALONE_TOOLCHAIN
+        ANDROID_TOOLCHAIN_NAME
+        ANDROID_ABI
+        ANDROID_NATIVE_API_LEVEL
+        ANDROID_STL
+        ANDROID_STL_FORCE_FEATURES
+        ANDROID_FORCE_ARM_BUILD
+        ANDROID_NO_UNDEFINED
+        ANDROID_SO_UNDEFINED
+        ANDROID_FUNCTION_LEVEL_LINKING
+        ANDROID_GOLD_LINKER
+        ANDROID_NOEXECSTACK
+        ANDROID_RELRO
+        ANDROID_LIBM_PATH
+        ANDROID_EXPLICIT_CRT_LINK
+    )
+        if( DEFINED ${CURRENT_VAR} )
+            if( ${CURRENT_VAR} MATCHES " ")
+                set( CURRENT_TOOLCHAIN_config "${CURRENT_TOOLCHAIN_config}set( ${CURRENT_VAR} \"${${CURRENT_VAR}}\" CACHE INTERNAL \"\" )\n" )
+            else()
+                set( CURRENT_TOOLCHAIN_config "${CURRENT_TOOLCHAIN_config}set( ${CURRENT_VAR} ${${CURRENT_VAR}} CACHE INTERNAL \"\" )\n" )
+            endif()
+        endif()
+    endforeach()
+    file( WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/android.toolchain.config.cmake" "${CURRENT_TOOLCHAIN_config}" )
+    unset( CURRENT_TOOLCHAIN_config )
 endif()
 
 ########################################
