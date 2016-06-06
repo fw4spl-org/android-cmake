@@ -1,5 +1,6 @@
 # Copyright (c) 2010-2011, Ethan Rublee
 # Copyright (c) 2011-2014, Andrey Kamaev
+# Copyright (c) 2016,      Andrew Gunnerson
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,7 +30,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 # ------------------------------------------------------------------------------
-#  Android CMake toolchain file, for use with the Android NDK r5-r9
+#  Android CMake toolchain file, for use with the Android NDK r5-r11
 #  Requires cmake 2.6.3 or newer (2.8.5 or newer is recommended).
 #  See home page: https://github.com/taka-no-me/android-cmake
 #
@@ -149,6 +150,10 @@
 #                          Implies -frtti -fno-exceptions.
 #                          Available for NDK r7b and newer.
 #                          Silently degrades to gnustl_static if not available.
+#        c++_static     -> Use the LLVM libc++ runtime as a static library.
+#                          Implies -frtti -fexceptions.
+#        c++_shared     -> Use the LLVM libc++ runtime as a shared library.
+#                          Implies -frtti -fexceptions.
 #
 #    ANDROID_STL_FORCE_FEATURES=ON - turn rtti and exceptions support based on
 #      chosen runtime. If disabled, then the user is responsible for settings
@@ -157,6 +162,9 @@
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
+
+set(ANDROID_TOOLCHAIN_NAME "arm-linux-androideabi-clang3.6" CACHE STRING "Name of toolchain to use within the NDK")
+# set(ANDROID_NDK_RELEASE_NUM 11000 CACHE VALUES "NDK r version")
 
 #################### Macro Definitions ####################
 # List filer
@@ -278,9 +286,14 @@ endmacro()
 
 # glob NDK toolchain search  
 macro( globNdkToolchains AVAILABLE_TOOLCHAIN_VAR AVAIBLE_TOOLCHAINS_LIST TOOLCHAIN_SUBPATH )
+    # message( FATAL_ERROR "ANDROID_NDK_RELEASE_NUM = ${ANDROID_NDK_RELEASE_NUM}")
     foreach( CURRENT_TOOLCHAIN ${${AVAIBLE_TOOLCHAINS_LIST}} )
         if( "${CURRENT_TOOLCHAIN}" MATCHES "-clang3[.][0-9]$" AND NOT EXISTS "${ANDROID_NDK_TOOLCHAINS_PATH}/${CURRENT_TOOLCHAIN}${TOOLCHAIN_SUBPATH}" )
-            string( REGEX REPLACE "-clang3[.][0-9]$" "-4.6" GCC_TOOLCHAIN "${CURRENT_TOOLCHAIN}" )
+            # if( ANDROID_NDK_RELEASE_NUM LESS 11000 )
+                # string( REGEX REPLACE "-clang3[.][0-9]$" "-4.6" GCC_TOOLCHAIN "${CURRENT_TOOLCHAIN}" )
+            # else()
+                string( REGEX REPLACE "-clang3[.][0-9]$" "-4.9" GCC_TOOLCHAIN "${CURRENT_TOOLCHAIN}" )
+            # endif()
         else()
             set( GCC_TOOLCHAIN "${CURRENT_TOOLCHAIN}" )
         endif()
@@ -487,6 +500,11 @@ if( ANDROID_NDK )
  if( EXISTS "${ANDROID_NDK}/RELEASE.TXT" )
   file( STRINGS "${ANDROID_NDK}/RELEASE.TXT" ANDROID_NDK_RELEASE_FULL LIMIT_COUNT 1 REGEX r[0-9]+[a-z]? )
   string( REGEX MATCH r[0-9]+[a-z]? ANDROID_NDK_RELEASE "${ANDROID_NDK_RELEASE_FULL}" )
+ elseif( EXISTS "${ANDROID_NDK}/source.properties" )
+  file( STRINGS "${ANDROID_NDK}/source.properties" ANDROID_NDK_RELEASE_FULL LIMIT_COUNT 1 REGEX "Pkg\\.Revision" )
+  string( REGEX REPLACE "^Pkg\\.Revision *= *(.+)" "\\1" ANDROID_NDK_RELEASE_FULL "${ANDROID_NDK_RELEASE_FULL}" )
+  # TODO: Minor version is currently ignored
+  string( REGEX REPLACE "^([0-9]+).([0-9]+).*" "r\\1" ANDROID_NDK_RELEASE "${ANDROID_NDK_RELEASE_FULL}" )
  else()
   set( ANDROID_NDK_RELEASE "r1x" )
   set( ANDROID_NDK_RELEASE_FULL "unreleased" )
@@ -521,15 +539,22 @@ if( BUILD_WITH_ANDROID_NDK )
  if( ANDROID_NDK_LAYOUT STREQUAL "LINARO" )
   set( ANDROID_NDK_HOST_SYSTEM_NAME ${ANDROID_NDK_HOST_SYSTEM_NAME2} ) # only 32-bit at the moment
   set( ANDROID_NDK_TOOLCHAINS_PATH "${ANDROID_NDK}/../../${ANDROID_NDK_HOST_SYSTEM_NAME}/toolchain" )
+  set( ANDROID_NDK_TOOLCHAINS_DEF_PATH "${ANDROID_NDK_TOOLCHAINS_PATH}" )
   set( ANDROID_NDK_TOOLCHAINS_SUBPATH  "" )
   set( ANDROID_NDK_TOOLCHAINS_SUBPATH2 "" )
  elseif( ANDROID_NDK_LAYOUT STREQUAL "ANDROID" )
   set( ANDROID_NDK_HOST_SYSTEM_NAME ${ANDROID_NDK_HOST_SYSTEM_NAME2} ) # only 32-bit at the moment
   set( ANDROID_NDK_TOOLCHAINS_PATH "${ANDROID_NDK}/../../gcc/${ANDROID_NDK_HOST_SYSTEM_NAME}/arm" )
+  set( ANDROID_NDK_TOOLCHAINS_DEF_PATH "${ANDROID_NDK_TOOLCHAINS_PATH}" )
   set( ANDROID_NDK_TOOLCHAINS_SUBPATH  "" )
   set( ANDROID_NDK_TOOLCHAINS_SUBPATH2 "" )
  else() # ANDROID_NDK_LAYOUT STREQUAL "RELEASE"
   set( ANDROID_NDK_TOOLCHAINS_PATH "${ANDROID_NDK}/toolchains" )
+  # if( ANDROID_NDK_RELEASE_NUM LESS 11000 )
+   # set( ANDROID_NDK_TOOLCHAINS_DEF_PATH "${ANDROID_NDK_TOOLCHAINS_PATH}" )
+  # else()
+   set( ANDROID_NDK_TOOLCHAINS_DEF_PATH "${ANDROID_NDK}/build/core/toolchains" )
+  # endif()
   set( ANDROID_NDK_TOOLCHAINS_SUBPATH  "/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}" )
   set( ANDROID_NDK_TOOLCHAINS_SUBPATH2 "/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME2}" )
  endif()
@@ -547,7 +572,7 @@ if( BUILD_WITH_ANDROID_NDK )
  set( AVAILABLE_TOOLCHAIN_ARCHS "" )
  set( AVAILABLE_TOOLCHAIN_COMPILER_VERSION "" )
  
- if( ANDROID_TOOLCHAIN_NAME AND EXISTS "${ANDROID_NDK_TOOLCHAINS_PATH}/${ANDROID_TOOLCHAIN_NAME}/" )
+ if( ANDROID_TOOLCHAIN_NAME AND EXISTS "${ANDROID_NDK_TOOLCHAINS_DEF_PATH}/${ANDROID_TOOLCHAIN_NAME}/" )
   # do not go through all toolchains if we know the name
   set( AVAIBLE_TOOLCHAINS_LIST "${ANDROID_TOOLCHAIN_NAME}" )
   globNdkToolchains( AVAILABLE_TOOLCHAINS AVAIBLE_TOOLCHAINS_LIST "${ANDROID_NDK_TOOLCHAINS_SUBPATH}" )
@@ -559,7 +584,7 @@ if( BUILD_WITH_ANDROID_NDK )
   endif()
  endif()
  if( NOT AVAILABLE_TOOLCHAINS )
-  file( GLOB AVAIBLE_TOOLCHAINS_LIST RELATIVE "${ANDROID_NDK_TOOLCHAINS_PATH}" "${ANDROID_NDK_TOOLCHAINS_PATH}/*" )
+  file( GLOB AVAIBLE_TOOLCHAINS_LIST RELATIVE "${ANDROID_NDK_TOOLCHAINS_DEF_PATH}" "${ANDROID_NDK_TOOLCHAINS_DEF_PATH}/*" )
   if( AVAILABLE_TOOLCHAINS )
    list(SORT AVAIBLE_TOOLCHAINS_LIST) # we need clang to go after gcc
   endif()
@@ -810,7 +835,8 @@ if( NOT ANDROID_STL )
   message( WARNING "You are using an obsolete variable ANDROID_USE_STLPORT to select the STL variant. Use -DANDROID_STL=stlport_static instead." )
  endif()
  if( NOT ANDROID_STL )
-  set( ANDROID_STL gnustl_shared )
+  # set( ANDROID_STL gnustl_shared )
+  set( ANDROID_STL c++_shared )
  endif()
 endif()
 set( ANDROID_STL "${ANDROID_STL}" CACHE STRING "C++ runtime" )
@@ -818,7 +844,8 @@ set( ANDROID_STL_FORCE_FEATURES ON CACHE BOOL "automatically configure rtti and 
 mark_as_advanced( ANDROID_STL ANDROID_STL_FORCE_FEATURES )
 
 if( BUILD_WITH_ANDROID_NDK )
- if( NOT "${ANDROID_STL}" MATCHES "^(none|system|system_re|gabi\\+\\+_static|gabi\\+\\+_shared|stlport_static|stlport_shared|gnustl_static|gnustl_shared)$")
+ #if( NOT "${ANDROID_STL}" MATCHES "^(none|system|system_re|gabi\\+\\+_static|gabi\\+\\+_shared|stlport_static|stlport_shared|gnustl_static|gnustl_shared)$")
+ if( NOT "${ANDROID_STL}" MATCHES "^(none|system|system_re|gabi\\+\\+_static|gabi\\+\\+_shared|stlport_static|stlport_shared|gnustl_static|gnustl_shared|c\\+\\+_static|c\\+\\+_shared)$") 
   message( FATAL_ERROR "ANDROID_STL is set to invalid value \"${ANDROID_STL}\".
 The possible values are:
   none           -> Do not configure the runtime.
@@ -830,6 +857,8 @@ The possible values are:
   stlport_shared -> Use the STLport runtime as a shared library.
   gnustl_static  -> (default) Use the GNU STL as a static library.
   gnustl_shared  -> Use the GNU STL as a shared library.
+  c++_static     -> Use LLVM libc++ runtime as static library.
+  c++_shared     -> Use LLVM libc++ runtime as shared library.
 " )
  endif()
 endif()
@@ -875,12 +904,19 @@ endif()
 # Clang specific setup
 if( "${ANDROID_TOOLCHAIN_NAME}" MATCHES "-clang3[.][0-9]?$" )
  string( REGEX MATCH "3[.][0-9]$" ANDROID_CLANG_VERSION "${ANDROID_TOOLCHAIN_NAME}")
- string( REGEX REPLACE "-clang${ANDROID_CLANG_VERSION}$" "-4.6" ANDROID_GCC_TOOLCHAIN_NAME "${ANDROID_TOOLCHAIN_NAME}" )
- if( NOT EXISTS "${ANDROID_NDK_TOOLCHAINS_PATH}/llvm-${ANDROID_CLANG_VERSION}${ANDROID_NDK_TOOLCHAINS_SUBPATH}/bin/clang${TOOL_OS_SUFFIX}" )
+ string( REGEX REPLACE "-clang${ANDROID_CLANG_VERSION}$" "-4.9" ANDROID_GCC_TOOLCHAIN_NAME "${ANDROID_TOOLCHAIN_NAME}" )
+ # string( REGEX REPLACE "-clang${ANDROID_CLANG_VERSION}$" "-4.6" ANDROID_GCC_TOOLCHAIN_NAME "${ANDROID_TOOLCHAIN_NAME}" )
+ # if( ANDROID_NDK_RELEASE_NUM LESS 11000 )
+  # set( ANDROID_CLANG_TOOLCHAIN_ROOT "${ANDROID_NDK_TOOLCHAINS_PATH}/llvm-${ANDROID_CLANG_VERSION}${ANDROID_NDK_TOOLCHAINS_SUBPATH}" )
+ # else()
+  set( ANDROID_CLANG_TOOLCHAIN_ROOT "${ANDROID_NDK_TOOLCHAINS_PATH}/llvm${ANDROID_NDK_TOOLCHAINS_SUBPATH}" )
+ # endif()
+
+ if( NOT EXISTS "${ANDROID_CLANG_TOOLCHAIN_ROOT}/bin/clang${TOOL_OS_SUFFIX}" )
+  unset( ANDROID_CLANG_TOOLCHAIN_ROOT )
   message( FATAL_ERROR "Could not find the Clang compiler driver" )
  endif()
  set( ANDROID_COMPILER_IS_CLANG 1 )
- set( ANDROID_CLANG_TOOLCHAIN_ROOT "${ANDROID_NDK_TOOLCHAINS_PATH}/llvm-${ANDROID_CLANG_VERSION}${ANDROID_NDK_TOOLCHAINS_SUBPATH}" )
 else()
  set( ANDROID_GCC_TOOLCHAIN_NAME "${ANDROID_TOOLCHAIN_NAME}" )
  unset( ANDROID_COMPILER_IS_CLANG CACHE )
@@ -948,6 +984,15 @@ if( BUILD_WITH_ANDROID_NDK )
   else()
    set( LIB_STL                "${LIB_STL}/libs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
   endif()
+  elseif( ANDROID_STL MATCHES "c\\+\\+")
+  if( ANDROID_NDK_RELEASE_NUM LESS 9000 ) # before r9
+   message( FATAL_ERROR "LLVM c++ is not available in your NDK. You have to upgrade to NDK r9 or newer to use LLVM c++.")
+  endif()
+  set( ANDROID_EXCEPTIONS       ON )
+  set( ANDROID_RTTI             ON )
+  set( ANDROID_STL_INCLUDE_DIRS "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libcxx/include" "${ANDROID_NDK}/sources/android/support/include"
+                                 "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++abi/libcxxabi/include")
+  set( LIB_STL                 "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libs/${ANDROID_NDK_ABI_NAME}/libc++_static.a" )
  else()
   message( FATAL_ERROR "Unknown runtime: ${ANDROID_STL}" )
  endif()
